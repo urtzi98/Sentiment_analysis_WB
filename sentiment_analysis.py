@@ -169,9 +169,20 @@ def change_tip(rev):
     return np.array([rev,])
 
 
+def transform_data(X_train, X_test):
+    tokenizer = Tokenizer(num_words=5000)
+    tokenizer.fit_on_texts(X_train)
+    X_test = tokenizer.texts_to_sequences(X_test)
+    X_test = pad_sequences(X_test, padding='post', maxlen=MAX_LEN)
+
+    return X_test
+
+
 def main():
     movie_reviews = read_data(DATA_PATH)
     X_train, X_test, y_train, y_test = create_train_test(movie_reviews)
+    predict_list = X_test[0:3]
+    reviews = transform_data(X_train, predict_list)
     X_train, X_test, embedding_matrix, vocab_size= prepare_embedding_layer(X_train, X_test) # The reviews are processed as numeric lists of size 100 following a corpus
 
     # CNN model for text classification
@@ -190,12 +201,13 @@ def main():
     # model = train_lstm(X_train, y_train, X_test, y_test, model)
     model.load_weights(checkpoint_filepath)
     # scores = model.evaluate(X_train, y_train, verbose=1)
-    single_review = change_tip(X_test[67])
-    prediction = model.predict(single_review)[0][0]
-    if prediction <= 0.5:
-        print("The review is negative")
-    else:
-        print("The review is positive")
+    for rev in reviews:
+        single_review = change_tip(rev)
+        prediction = model.predict(single_review)[0][0]
+        if prediction <= 0.5:
+            print("The review is negative")
+        else:
+            print("The review is positive")
     
 
 if __name__ == '__main__':
