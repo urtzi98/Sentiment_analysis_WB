@@ -72,7 +72,7 @@ def prepare_embedding_layer(X_train, X_test):
     X_test = pad_sequences(X_test, padding='post', maxlen=MAX_LEN)
 
     embeddings_dictionary = dict()
-    glove_file = open('glove.6B.100d.txt', encoding="utf8")
+    glove_file = open('/home/veridas/Escritorio/master/web_science/glove.6B.100d.txt', encoding="utf8")
 
     for line in glove_file:
         records = line.split()
@@ -162,7 +162,7 @@ def main():
     # embedding matrix is the initial weights configuration
     model = create_model(vocab_size, embedding_matrix)
     # model = train_cnn(X_train, y_train, X_test, y_test, model)
-    #model.load_weights(checkpoint_filepath)
+    model.load_weights(checkpoint_filepath)
     # prediction on single reviews using the best weights
     score_test = model.evaluate(X_test, y_test, verbose=1)
     print("Test Score:", score_test[0])
