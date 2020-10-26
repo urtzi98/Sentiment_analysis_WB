@@ -1,3 +1,4 @@
+from numpy.core.fromnumeric import mean
 import pandas as pd
 import numpy as np
 import re
@@ -10,7 +11,7 @@ from keras.preprocessing.sequence import pad_sequences
 from keras.models import Sequential
 from keras.layers.core import Activation, Dropout, Dense
 from keras.layers import Flatten
-from keras.layers import GlobalMaxPooling1D, Conv1D
+from keras.layers import GlobalMaxPooling1D, Conv1D, LSTM
 from keras.layers.embeddings import Embedding
 from sklearn.model_selection import train_test_split
 from keras.preprocessing.text import Tokenizer
@@ -19,7 +20,8 @@ from keras.callbacks import ModelCheckpoint
 TAG_RE = re.compile(r'<[^>]+>')
 DATA_PATH = "IMDB Dataset.csv"
 MAX_LEN = 100
-checkpoint_filepath = 'checkpoint/weights'
+# checkpoint_filepath = 'checkpoint/weights'
+checkpoint_filepath = 'checkpoint/weights_lstm'
 
 model_checkpoint_callback = ModelCheckpoint(
     filepath = checkpoint_filepath,
@@ -89,11 +91,11 @@ def prepare_embedding_layer(X_train, X_test):
 
     return X_train, X_test, embedding_matrix, vocab_size
 
+
 def create_model(vocab_size, embedding_matrix):
     model = Sequential()
     embedding_layer = Embedding(vocab_size, 100, weights=[embedding_matrix], input_length=MAX_LEN , trainable=False)
     model.add(embedding_layer)
-
     model.add(Conv1D(128, 5, activation='relu'))
     model.add(GlobalMaxPooling1D())
     model.add(Dense(1, activation='sigmoid'))
@@ -139,37 +141,62 @@ def print_graphs(out_values):
     plt.legend(['train','test'], loc = 'upper left')
     plt.show()
 
-def process_instance(instance, X_train):
-    tokenizer = Tokenizer(num_words=5000)
-    tokenizer.fit_on_texts(X_train)
-    instance = tokenizer.texts_to_sequences(instance)
 
-    # flat_list = []
-    # for sublist in instance:
-    #     for item in sublist:
-    #         flat_list.append(item)
+def create_model_lstm(vocab_size, embedding_matrix):
+    model = Sequential()
+    embedding_layer = Embedding(vocab_size, 100, weights=[embedding_matrix], input_length=MAX_LEN , trainable=False)
+    model.add(embedding_layer)
+    model.add(LSTM(128))
+    model.add(Dense(1, activation='sigmoid'))
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
 
-    # flat_list = [flat_list]
+    return model
 
-    instance = pad_sequences(instance, padding='post', maxlen=MAX_LEN)
 
-    return instance
+def train_lstm(X_train, y_train, X_test, y_test, model):
+    out_values = model.fit(X_train, y_train, batch_size=128, epochs=6,
+                           callbacks=[model_checkpoint_callback],
+                           verbose=1, validation_split=0.2)
+
+    score_test = model.evaluate(X_test, y_test, verbose=1)
+    print("Test Score:", score_test[0])
+    print("Test Accuracy:", score_test[1])
+
+    return model
+
+
+def change_tip(rev):
+    return np.array([rev,])
+
 
 def main():
     movie_reviews = read_data(DATA_PATH)
     X_train, X_test, y_train, y_test = create_train_test(movie_reviews)
-    X_train, X_test, embedding_matrix, vocab_size = prepare_embedding_layer(X_train, X_test)
-    # embedding matrix is the initial weights configuration
-    model = create_model(vocab_size, embedding_matrix)
+    X_train, X_test, embedding_matrix, vocab_size= prepare_embedding_layer(X_train, X_test) # The reviews are processed as numeric lists of size 100 following a corpus
+
+    # CNN model for text classification
+    # model = create_model(vocab_size, embedding_matrix)
+    # print(model.summary())
     # model = train_cnn(X_train, y_train, X_test, y_test, model)
-    model.load_weights(checkpoint_filepath)
+    # model.load_weights(checkpoint_filepath)
     # prediction on single reviews using the best weights
-    score_test = model.evaluate(X_test, y_test, verbose=1)
-    print("Test Score:", score_test[0])
-    print("Test Accuracy:", score_test[1])
-    print(np.count_nonzero(y_test==1))
-    print(np.count_nonzero(y_test==0))
-    print(y_test.shape)
+    # score_test = model.evaluate(X_test, y_test, verbose=1)
+    # print("Test Score:", score_test[0])
+    # print("Test Accuracy:", score_test[1])
+    # print("Number of positive reviews in test set", np.count_nonzero(y_test==1))
+    # print("Number of positive reviews in test set", np.count_nonzero(y_test==0))
+
+    model = create_model_lstm(vocab_size, embedding_matrix)
+    # model = train_lstm(X_train, y_train, X_test, y_test, model)
+    model.load_weights(checkpoint_filepath)
+    # scores = model.evaluate(X_train, y_train, verbose=1)
+    single_review = change_tip(X_test[67])
+    prediction = model.predict(single_review)[0][0]
+    if prediction <= 0.5:
+        print("The review is negative")
+    else:
+        print("The review is positive")
+    
 
 if __name__ == '__main__':
     main()
