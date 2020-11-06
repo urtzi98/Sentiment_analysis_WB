@@ -161,6 +161,7 @@ def train_lstm(X_train, y_train, X_test, y_test, model):
     score_test = model.evaluate(X_test, y_test, verbose=1)
     print("Test Score:", score_test[0])
     print("Test Accuracy:", score_test[1])
+    print_graphs(out_values)
 
     return model
 
@@ -198,16 +199,16 @@ def main():
     # print("Number of positive reviews in test set", np.count_nonzero(y_test==0))
 
     model = create_model_lstm(vocab_size, embedding_matrix)
-    # model = train_lstm(X_train, y_train, X_test, y_test, model)
-    model.load_weights(checkpoint_filepath)
+    model = train_lstm(X_train, y_train, X_test, y_test, model)
+    # model.load_weights(checkpoint_filepath)
     # scores = model.evaluate(X_train, y_train, verbose=1)
-    for rev in reviews:
-        single_review = change_tip(rev)
-        prediction = model.predict(single_review)[0][0]
-        if prediction <= 0.5:
-            print("The review is negative")
-        else:
-            print("The review is positive")
+    # for rev in reviews:
+    #     single_review = change_tip(rev)
+    #     prediction = model.predict(single_review)[0][0]
+    #     if prediction <= 0.5:
+    #         print("The review is negative")
+    #     else:
+    #         print("The review is positive")
     
 
 if __name__ == '__main__':
